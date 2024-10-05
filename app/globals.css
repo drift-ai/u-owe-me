@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-white text-gray-800 dark:bg-gray-100 dark:text-gray-900;
+}
+
+input, textarea, select {
+  @apply bg-gray-50 border border-gray-300 text-gray-900 
+         focus:ring-blue-500 focus:border-blue-500
+         dark:bg-gray-200 dark:border-gray-400 dark:text-gray-800
+         dark:focus:ring-blue-400 dark:focus:border-blue-400;
+}
+
+th, thead td {
+  @apply bg-gray-100 text-gray-800 font-semibold
+         dark:bg-gray-300 dark:text-gray-900;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}

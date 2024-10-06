@@ -1,36 +1,85 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# U OWE ME
 
-## Getting Started
+## 1. Frontend
 
-First, run the development server:
+### 1.1. Installation and Development
 
+1. Clone the repository:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/your-username/u-owe-me.git
+cd u-owe-me
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Install dependencies:
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. Run the development server:
+```bash
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+4. Open [http://localhost:3000](http://localhost:3000) in your browser to see the application.
 
-## Learn More
 
-To learn more about Next.js, take a look at the following resources:
+### 1.2. Deployment
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. create stack
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+aws cloudformation create-stack \
+  --stack-name u-owe-me-front-end \
+  --template-body file://cfn-front-end.yml \
+  --parameters ParameterKey=Repository,ParameterValue=https://github.com/drift-ai/u-owe-me.git \
+  --capabilities CAPABILITY_IAM
+```
 
-## Deploy on Vercel
+2. update stack
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+aws cloudformation update-stack \
+  --stack-name u-owe-me-front-end \
+  --template-body file://cfn-front-end.yml \
+  --parameters ParameterKey=Repository,ParameterValue=https://github.com/drift-ai/u-owe-me.git \
+  --capabilities CAPABILITY_IAM
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## 2. Backend
+
+- Get access token
+```bash
+export ACCESS_TOKEN="$(curl -X POST "https://bankaccountdata.gocardless.com/api/v2/token/new/" \
+  -H "accept: application/json" \
+  -H  "Content-Type: application/json" \
+  -d "{\"secret_id\":\"$GOCARDLESS_SECRET_ID\", \"secret_key\":\"$GOCARDLESS_SECRET_KEY\"}" | jq -r ".access" )"
+```
+- list all banks
+```bash
+curl -X GET "https://bankaccountdata.gocardless.com/api/v2/institutions/?country=be" \
+  -H  "accept: application/json" \
+  -H  "Authorization: Bearer $ACCESS_TOKEN"
+
+# {"id": "KBC_KREDBEBB", "name": "KBC", "bic": "KREDBEBB", "transaction_total_days": "365", "countries": ["BE"], "logo": "https://storage.googleapis.com/gc-prd-institution_icons-production/FR/PNG/kbc.png"}
+
+```
+- Connect
+```bash
+curl -X POST "https://bankaccountdata.gocardless.com/api/v2/requisitions/" \
+  -H  "accept: application/json" -H  "Content-Type: application/json" \
+  -H  "Authorization: Bearer $ACCESS_TOKEN" \
+  -d "{\"redirect\": \"https://www.meet-drift.ai\",
+       \"institution_id\": \"KBC_KREDBEBB\"}"
+
+# {"id":"df753892-e81d-433f-aeb9-096209b286f0","created":"2024-09-29T14:36:46.730770Z","redirect":"https://www.meet-drift.ai","status":"CR","institution_id":"KBC_KREDBEBB","agreement":"a2379b4b-6c97-4c0b-b80b-f746b604ac78","reference":"df753892-e81d-433f-aeb9-096209b286f0",# "accounts":[],"link":"https://ob.gocardless.com/ob-psd2/start/7eb7467b-54ca-4bc6-af76-6efc4421e728/KBC_KREDBEBB","ssn":null,"account_selection":false,"redirect_immediate":false}
+```
+
+```bash
+curl -X GET "https://bankaccountdata.gocardless.com/api/v2/requisitions/df753892-e81d-433f-aeb9-096209b286f0/" \
+  -H  "accept: application/json" \
+  -H  "Authorization: Bearer $ACCESS_TOKEN" 
+
+  # {"id":"df753892-e81d-433f-aeb9-096209b286f0","created":"2024-09-29T14:36:46.730770Z","redirect":"https://www.meet-drift.ai","status":"LN","institution_id":"KBC_KREDBEBB","agreement":"a2379b4b-6c97-4c0b-b80b-f746b604ac78","reference":"df753892-e81d-433f-aeb9-096209b286f0","accounts":["4aba2b84-3aee-4977-a7e3-723d19f1a632"],"link":"https://ob.gocardless.com/ob-psd2/start/7eb7467b-54ca-4bc6-af76-6efc4421e728/KBC_KREDBEBB","ssn":null,"account_selection":false,"redirect_immediate":false}
+
+```

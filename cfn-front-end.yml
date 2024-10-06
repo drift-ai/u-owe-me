@@ -1,0 +1,52 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CloudFormation template for deploying a Next.js app with AWS Amplify
+
+Parameters:
+  Repository:
+    Type: String
+    Description: The GitHub repository URL for your Next.js app
+    Default: https://github.com/drift-ai/u-owe-me
+
+
+Resources:
+  AmplifyApp:
+    Type: AWS::Amplify::App
+    Properties:
+      Name: UOweMe
+      Repository: !Ref Repository
+      Description: UOweMe next.js app deployed with Amplify
+      OauthToken: '{{resolve:secretsmanager:GithubOAuthToken:SecretString:OAuthToken}}'
+      BuildSpec: |-
+        version: 1
+        backend:
+          phases:
+            build:
+              commands:
+                - npm ci --cache .npm --prefer-offline
+                - npx ampx pipeline-deploy --branch $AWS_BRANCH --app-id $AWS_APP_ID
+        frontend:
+          phases:
+            build:
+              commands:
+                - npm run build
+          artifacts:
+            baseDirectory: .next
+            files:
+              - '**/*'
+          cache:
+            paths:
+              - .next/cache/**/*
+              - .npm/**/*
+              - node_modules/**/*
+
+  AmplifyBranch:
+    Type: AWS::Amplify::Branch
+    Properties:
+      AppId: !GetAtt AmplifyApp.AppId
+      BranchName: main
+      EnableAutoBuild: true
+
+Outputs:
+  DefaultDomain:
+    Value: !GetAtt AmplifyApp.DefaultDomain
+    Description: Default domain for the Amplify app
